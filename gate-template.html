@@ -30,7 +30,7 @@
   label.l { display: block; font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; }
   input[type=password] { width: 100%; font: inherit; font-size: 1rem; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
   input[type=password]:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
-  .chk { display: flex; gap: 8px; align-items: center; margin: 12px 0 18px; font-size: 0.9rem; }
+  .small { margin: 12px 0 18px; font-size: 0.85rem; }
   button { width: 100%; font: inherit; font-weight: 700; font-size: 1rem; padding: 10px 16px; border-radius: 6px; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg); }
   button:disabled { opacity: 0.6; cursor: wait; }
   .msg { min-height: 1.4em; margin: 12px 0 0; color: var(--bad); font-size: 0.9rem; }
@@ -43,7 +43,7 @@
     <p>Enter the password to open the page. Ask the person who shared it with you.</p>
     <label class="l" for="pw">Password</label>
     <input type="password" id="pw" name="password" autocomplete="current-password" required autofocus>
-    <label class="chk"><input type="checkbox" id="rem" checked> Remember on this computer</label>
+    <p class="small">For privacy, you are signed out after 30 minutes without use, and when you close the browser.</p>
     <button type="submit" id="go">Open</button>
     <div class="msg" id="msg" role="alert"></div>
   </form>
@@ -54,6 +54,26 @@
   'use strict';
   var P = /*PAYLOAD*/null;
   var REM = 'ed-notes-gate';
+  var IDLE_MS = 30 * 60 * 1000;
+  var COOKIE = 'ed-notes-session';
+  // A cookie without an expiry date disappears when the browser is closed.
+  function hasSession() { return document.cookie.split('; ').indexOf(COOKIE + '=1') >= 0; }
+  function startSession() {
+    document.cookie = COOKIE + '=1; path=/; SameSite=Strict' + (location.protocol === 'https:' ? '; Secure' : '');
+    try { localStorage.setItem('ed-notes-active', String(Date.now())); } catch (e) {}
+  }
+  // Browser closed, or not used for 30 minutes: sign out. If some changes never reached
+  // Google Drive, keep them (only ask for the password again) so they upload on next open.
+  (function expire() {
+    try {
+      var last = +localStorage.getItem('ed-notes-active') || 0;
+      if (hasSession() && !(last && Date.now() - last > IDLE_MS)) return;
+      if (localStorage.getItem('ed-notes-unsynced')) { localStorage.removeItem(REM); return; }
+      localStorage.removeItem('ed-notes-v1');
+      Object.keys(localStorage).forEach(function (k) { if (/^ed-notes/.test(k)) localStorage.removeItem(k); });
+      indexedDB.deleteDatabase('ed-notes-file');
+    } catch (e) {}
+  })();
   function b64(s) { var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
   function toB64(buf) { var u = new Uint8Array(buf), s = ''; for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
   async function derive(pw) {
@@ -66,6 +86,8 @@
     return new TextDecoder().decode(pt);
   }
   function show(html) {
+    // replacing the page while it is still loading would mix the two pages together
+    if (document.readyState !== 'complete') { window.addEventListener('load', function () { show(html); }, { once: true }); return; }
     document.open();
     document.write(html);
     document.close();
@@ -81,7 +103,7 @@
     var r = JSON.parse(localStorage.getItem(REM) || 'null');
     if (r && r.salt === P.salt && r.k) {
       f.hidden = true;
-      unlock(b64(r.k)).then(show, function () {
+      unlock(b64(r.k)).then(function (html) { startSession(); show(html); }, function () {
         try { localStorage.removeItem(REM); } catch (e) {}
         f.hidden = false;
       });
@@ -95,10 +117,8 @@
     try {
       var raw = await derive(pw);
       var html = await unlock(raw);
-      try {
-        if (document.getElementById('rem').checked) localStorage.setItem(REM, JSON.stringify({ salt: P.salt, k: toB64(raw) }));
-        else localStorage.removeItem(REM);
-      } catch (e2) {}
+      try { localStorage.setItem(REM, JSON.stringify({ salt: P.salt, k: toB64(raw) })); } catch (e2) {}
+      startSession();
       show(html);
     } catch (err) {
       go.disabled = false; go.textContent = 'Open';
