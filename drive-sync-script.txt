@@ -1,0 +1,85 @@
+/* E&D Notes - Google Drive sync script
+   Your notes are saved in YOUR OWN Google Drive, in a file called ed-notes-data.json.
+   Nobody else (including whoever made this page) can see them.
+
+   How to use: paste ALL of this text into a new project at https://script.google.com
+   Full step-by-step guide: see the "How to set up" link on the E&D page. */
+
+const FILE_NAME = 'ed-notes-data.json';
+
+// STEP 1: choose "setup" in the drop-down at the top and click Run.
+// It connects the script to your Google Drive and creates YOUR sync key.
+// Your key is shown at the bottom of the screen ("Execution log").
+function setup() {
+  const props = PropertiesService.getScriptProperties();
+  dataFile(props);
+  let key = props.getProperty('syncKey');
+  if (!key) {
+    key = Utilities.getUuid().replace(/-/g, '').slice(0, 24);
+    props.setProperty('syncKey', key);
+  }
+  console.log('YOUR SYNC KEY IS:   ' + key + '   (copy it, you need it on the E&D page. Keep it private.)');
+}
+
+// Forgot your key? Choose "showKey" in the drop-down and click Run.
+function showKey() {
+  const key = PropertiesService.getScriptProperties().getProperty('syncKey');
+  console.log(key ? 'YOUR SYNC KEY IS:   ' + key : 'No key yet. Run "setup" first.');
+}
+
+// Think someone else has your key? Run "newKey", then enter the new key on each computer.
+function newKey() {
+  PropertiesService.getScriptProperties().deleteProperty('syncKey');
+  setup();
+}
+
+/* ---------- nothing below needs changing ---------- */
+
+function doGet() {
+  return ContentService.createTextOutput('E&D sync is running. Paste this link into the E&D page.');
+}
+
+function doPost(e) {
+  let req;
+  try { req = JSON.parse(e.postData.contents); } catch (err) { return out({ ok: false, error: 'bad request' }); }
+  const props = PropertiesService.getScriptProperties();
+  const key = props.getProperty('syncKey');
+  if (!key) return out({ ok: false, error: 'not set up' });
+  if (!req || req.key !== key) return out({ ok: false, error: 'wrong key' });
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(25000);
+  try {
+    const file = dataFile(props);
+    const rev = Number(props.getProperty('rev') || 0);
+
+    if (req.op === 'rev') return out({ ok: true, rev: rev });
+    if (req.op === 'get') return out({ ok: true, rev: rev, data: file.getBlob().getDataAsString() });
+    if (req.op === 'put') {
+      // only accept a save made on top of the latest copy, otherwise send the latest back to merge
+      if (req.rev !== rev) return out({ ok: false, conflict: true, rev: rev, data: file.getBlob().getDataAsString() });
+      file.setContent(String(req.data || ''));
+      props.setProperty('rev', String(rev + 1));
+      return out({ ok: true, rev: rev + 1 });
+    }
+    return out({ ok: false, error: 'bad request' });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// The data file lives in My Drive. An existing ed-notes-data.json there is used; otherwise one is created.
+function dataFile(props) {
+  const id = props.getProperty('fileId');
+  if (id) {
+    try { const f = DriveApp.getFileById(id); if (!f.isTrashed()) return f; } catch (err) {}
+  }
+  const found = DriveApp.getRootFolder().getFilesByName(FILE_NAME);
+  const f = found.hasNext() ? found.next() : DriveApp.getRootFolder().createFile(FILE_NAME, '', 'application/json');
+  props.setProperty('fileId', f.getId());
+  return f;
+}
+
+function out(o) {
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}

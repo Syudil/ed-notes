@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E&amp;D Drive Setup</title>
+<style>
+  :root {
+    --bg: #edf1f2; --surface: #ffffff; --fg: #13242b; --muted: #55666e; --line: #d3dcdf;
+    --accent: #0a6c74; --accent-fg: #ffffff; --accent-soft: #cfe5e7; --warn-bg: #fff6e0; --warn-line: #e8cf8a;
+    --font: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1517; --surface: #151e21; --fg: #e3ecee; --muted: #8fa2a8; --line: #2a393e;
+      --accent: #5cc2c9; --accent-fg: #062a2d; --accent-soft: #16393c; --warn-bg: #2a2412; --warn-line: #5c4c1e;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1517; --surface: #151e21; --fg: #e3ecee; --muted: #8fa2a8; --line: #2a393e;
+    --accent: #5cc2c9; --accent-fg: #062a2d; --accent-soft: #16393c; --warn-bg: #2a2412; --warn-line: #5c4c1e;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 1.0625rem; line-height: 1.55; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.6rem; margin: 0 0 6px; line-height: 1.25; }
+  h2 { font-size: 1.2rem; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin: 0 0 16px; }
+  .card .sub { color: var(--muted); margin: 0 0 12px; font-size: 0.95rem; }
+  ol { margin: 0; padding-left: 1.4em; }
+  ol > li { margin: 0 0 14px; padding-left: 4px; }
+  ol > li:last-child { margin-bottom: 0; }
+  ul { margin: 6px 0 0; padding-left: 1.2em; }
+  ul li { margin: 2px 0; }
+  b { font-weight: 700; }
+  code, .k { font-family: var(--mono); font-size: 0.9em; background: var(--accent-soft); border-radius: 4px; padding: 1px 5px; }
+  .btn { font: inherit; font-weight: 700; font-size: 0.95rem; border-radius: 6px; padding: 9px 16px; cursor: pointer;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg); text-decoration: none; display: inline-block; }
+  .btn.ghost { background: var(--surface); color: var(--fg); border-color: var(--line); }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 8px; }
+  .done { color: var(--muted); font-size: 0.9rem; }
+  .note { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 10px; padding: 14px 16px; margin: 0 0 16px; }
+  dl { margin: 0; }
+  dt { font-weight: 700; margin-top: 12px; }
+  dt:first-child { margin-top: 0; }
+  dd { margin: 2px 0 0; color: var(--muted); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Save your E&amp;D notes to Google Drive</h1>
+  <p class="lead">Set this up once, and your notes are the same on every computer you use. They are saved in <b>your own</b> Google Drive. Nobody else can see them, including whoever made this page.</p>
+
+  <div class="card">
+    <h2>Part 1: Set up Google</h2>
+    <p class="sub">Do this one time only, on any computer. About 5 minutes. Use Chrome.</p>
+    <ol>
+      <li>Open <a href="https://script.google.com" target="_blank" rel="noopener">script.google.com</a> in a new tab, sign in with your Google account, and click <b>New project</b> (top left).</li>
+      <li>Click this button to copy the script:
+        <div class="row"><button class="btn" id="copy" type="button">Copy script</button> <span class="done" id="copied" role="status"></span></div>
+        <div class="row"><a href="drive-sync-script.txt" target="_blank" rel="noopener">Or open the script as text</a></div>
+      </li>
+      <li>Go back to the Google tab. Click on the text in the middle, select all of it (<span class="k">Ctrl+A</span>, or <span class="k">Cmd+A</span> on Mac), and paste (<span class="k">Ctrl+V</span> / <span class="k">Cmd+V</span>). This replaces the old text. Then save (<span class="k">Ctrl+S</span> / <span class="k">Cmd+S</span>).</li>
+      <li>At the top, the drop-down next to <b>Debug</b> should say <b>setup</b>. Click <b>Run</b>.
+        <ul>
+          <li>Google asks for permission. Click <b>Review permissions</b> and pick your account.</li>
+          <li>If it says <b>“Google hasn’t verified this app”</b>: click <b>Advanced</b> (small text, bottom left), then <b>Go to Untitled project (unsafe)</b>. This is safe, because the script is your own.</li>
+          <li>Click <b>Allow</b>.</li>
+        </ul>
+      </li>
+      <li>At the bottom of the screen (<b>Execution log</b>) you will see <b>YOUR SYNC KEY IS: …</b>. Copy that key and keep it somewhere private. You need it in Part 2.
+        <ul><li>No key showing? Click <b>Run</b> again.</li></ul>
+      </li>
+      <li>Click the blue <b>Deploy</b> button (top right), then <b>New deployment</b>.
+        <ul>
+          <li>Click the gear icon next to “Select type” and choose <b>Web app</b>.</li>
+          <li>Execute as: <b>Me</b></li>
+          <li>Who has access: <b>Anyone</b> (this only means the link works without signing in; without your key nobody can open your notes)</li>
+          <li>Click <b>Deploy</b>.</li>
+        </ul>
+      </li>
+      <li>Google shows a <b>Web app</b> link ending in <code>/exec</code>. Click <b>Copy</b> and keep it with your key.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Part 2: Turn on sync</h2>
+    <p class="sub">Do this on each computer you use. Under a minute.</p>
+    <ol>
+      <li>Open the <a href="./">E&amp;D page</a>.</li>
+      <li>Click <b>Google Drive sync</b> near the top.</li>
+      <li>Paste the <code>/exec</code> link from Part 1, then click OK.</li>
+      <li>Enter your sync key, then click OK.</li>
+      <li>You should see “Google Drive sync is on”. Done.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Every day</h2>
+    <ul>
+      <li>Just use the E&amp;D page. It saves to your Google Drive by itself.</li>
+      <li>Under the title it says <b>“Synced with Google Drive at (time)”</b> when everything is saved. Wait for this before closing the page.</li>
+      <li>Try not to type on two computers at the same time.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>If something goes wrong</h2>
+    <dl>
+      <dt>“Could not reach Google Drive, it will retry”</dt>
+      <dd>No internet. Your notes are still saved on this computer and upload by themselves when the internet is back.</dd>
+      <dt>“The key is wrong”</dt>
+      <dd>Click <b>Fix Google Drive key</b> and enter it again. Capital and small letters matter. Forgot it? In script.google.com, choose <b>showKey</b> in the drop-down and click Run.</dd>
+      <dt>“The script is not set up yet”</dt>
+      <dd>Do Part 1 step 4 again (choose <b>setup</b>, click Run).</dd>
+      <dt>“Could not reach the script”</dt>
+      <dd>The link is wrong, or “Who has access” was not set to <b>Anyone</b>. Check the link, or do Part 1 step 6 again.</dd>
+      <dt>The other computer doesn’t show the new notes yet</dt>
+      <dd>Click <b>Sync now</b>, or wait one minute.</dd>
+    </dl>
+  </div>
+
+  <div class="note">
+    <b>Keep your link and key private.</b> Together they open your patient notes. If you think someone else has them, in script.google.com choose <b>newKey</b>, click Run, and enter the new key on each computer. You are responsible for the patient data in your Google account, so follow your clinic’s rules.
+  </div>
+</div>
+<script>
+  document.getElementById('copy').addEventListener('click', async function () {
+    var msg = document.getElementById('copied');
+    try {
+      var r = await fetch('drive-sync-script.txt', { cache: 'no-store' });
+      if (!r.ok) throw 0;
+      await navigator.clipboard.writeText(await r.text());
+      msg.textContent = 'Copied. Now go to step 3.';
+    } catch (e) {
+      msg.textContent = 'Could not copy. Use “Open the script as text” below instead.';
+    }
+  });
+</script>
+</body>
+</html>
